@@ -550,7 +550,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _startRoomSize: {x: 100, y: 100}
-  _minimumRoomSize: {x: 15, y: 20}
+  _minimumRoomSize: {x: 40, y: 40}
 --- !u!1 &1716264624
 GameObject:
   m_ObjectHideFlags: 0

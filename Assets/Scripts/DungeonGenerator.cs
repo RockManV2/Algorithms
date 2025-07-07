@@ -10,7 +10,8 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private Vector2Int _startRoomSize;
     [SerializeField] private Vector2Int _minimumRoomSize;
     
-    private List<RectInt> _rects = new();
+    private readonly List<RectInt> _rects = new();
+    private readonly List<RectInt> _doors = new();
     
     
     private void Start()
@@ -23,12 +24,16 @@ public class DungeonGenerator : MonoBehaviour
     {
         foreach (RectInt rect in _rects)
             AlgorithmsUtils.DebugRectInt(rect, Color.red);
+        
+        foreach (RectInt rect in _doors)
+            AlgorithmsUtils.DebugRectInt(rect, Color.green);
     }
 
     [Button(enabledMode: EButtonEnableMode.Always)]
     private IEnumerator GenerateDungeon()
     {
         yield return StartCoroutine(GenerateRoom());
+        yield return StartCoroutine(GenerateDoors());
         SoundManager.PlaySound("ding");
     }
     
@@ -43,8 +48,6 @@ public class DungeonGenerator : MonoBehaviour
         
         if (selected.width * 0.5f < _minimumRoomSize.x && selected.height * 0.5f < _minimumRoomSize.y)
         {
-            Debug.Log(selected.width);
-            Debug.Log(selected.height);
             yield break;
         }
             
@@ -59,9 +62,10 @@ public class DungeonGenerator : MonoBehaviour
     }
     
     [Button(enabledMode: EButtonEnableMode.Always)]
-    private void ResetRooms()
+    private void Reset()
     {
         _rects.Clear();
+        _doors.Clear();
         _rects.Add(new RectInt(new Vector2Int(0,0), _startRoomSize));
     }
 
@@ -75,10 +79,8 @@ public class DungeonGenerator : MonoBehaviour
 
         Vector2Int position = rect.position;
         
-        // Base Rect
         _rects.Add(new RectInt(position, new Vector2Int(random, rect.height)));
         
-        // New Rect
         _rects.Add(new RectInt(new Vector2Int(position.x + random, position.y), new Vector2Int(width - random, rect.height)));
         
         _rects.Remove(rect);
@@ -101,5 +103,51 @@ public class DungeonGenerator : MonoBehaviour
         _rects.Add(new RectInt(new Vector2Int(position.x, position.y + random), new Vector2Int(rect.width, height - random)));
         
         _rects.Remove(rect);
+    }
+
+    private IEnumerator GenerateDoors()
+    {
+        for (int i = 0; i < _rects.Count; i++)
+        {
+            for (int j = i + 1; j < _rects.Count; j++)
+            {
+                var rect1 = _rects[i];
+                var rect2 = _rects[j];
+                
+                if (!AlgorithmsUtils.Intersects(rect1, rect2)) continue;
+                
+                yield return new WaitForSeconds(0.5f);
+                PlaceDoor(rect1, rect2);
+            }
+        }
+        
+        yield return null;
+    }
+
+    private void PlaceDoor(RectInt rect1, RectInt rect2)
+    {
+        if (rect1.position.y != rect2.position.y)
+        {
+            float min = Mathf.Min(rect1.position.x + rect1.width, rect2.position.x + rect2.width) * 0.9f;
+            float max = Mathf.Max(rect1.position.x, rect2.position.x) * 1.1f;
+            
+            _doors.Add(new RectInt(new Vector2Int(
+                    (int)Random.Range(min, max),
+                    rect1.position.y + rect1.size.y
+                ),
+                new Vector2Int(1, 1)));
+        }
+        else if (rect1.position.x != rect2.position.x)
+        {
+            float min = Mathf.Min(rect1.position.y + rect1.height, rect2.position.y + rect2.height) * 0.9f;
+            float max = Mathf.Max(rect1.position.y, rect2.position.y) * 1.1f;
+            
+            _doors.Add(new RectInt(new Vector2Int(
+                    rect1.position.x + rect1.size.x,
+                    (int)Random.Range(min, max)
+                ),
+                new Vector2Int(1, 1)));
+        }
+
     }
 }
