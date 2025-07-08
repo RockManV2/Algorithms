@@ -10,8 +10,6 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private Vector2Int _startRoomSize;
     [SerializeField] private Vector2Int _minimumRoomSize;
     
-    private readonly List<RectInt> _rects = new();
-    private readonly List<RectInt> _doors = new();
     private readonly List<DungeonNode> _dungeonNodes = new();
     
     private Coroutine _coroutine;
@@ -19,20 +17,26 @@ public class DungeonGenerator : MonoBehaviour
     private void Start()
     {
         var rect1 = new RectInt(new Vector2Int(0,0), _startRoomSize);
-        _rects.Add(rect1);
+        
+        _dungeonNodes.Add(new DungeonNode("Room", rect1));
     }
 
     private void Update()
     {
-        foreach (RectInt rect in _rects)
-            AlgorithmsUtils.DebugRectInt(rect, Color.red);
-        
-        foreach (RectInt rect in _doors)
-            AlgorithmsUtils.DebugRectInt(rect, Color.green);
-
         foreach (var node in _dungeonNodes)
-            AlgorithmsUtils.DebugRectInt(new RectInt(node.Position, new Vector2Int(1,1)), Color.green);
-
+            if (node.Type == "Room")
+            {
+                AlgorithmsUtils.DebugRectInt(node.Rect, Color.red);
+                DebugExtension.DebugCircle(AlgorithmsUtils.Vector2IntToVector3(node.Center), Color.green);
+            }
+        
+        foreach (var node in _dungeonNodes)
+            if (node.Type == "Door")
+            {
+                DebugExtension.DebugCircle(AlgorithmsUtils.Vector2IntToVector3(node.Center), Color.yellow);
+                foreach (var neighbor in node.Neighbors)
+                    Debug.DrawLine(AlgorithmsUtils.Vector2IntToVector3(node.Center), AlgorithmsUtils.Vector2IntToVector3(neighbor.Center), Color.yellow);
+            }
     }
 
     [Button(enabledMode: EButtonEnableMode.Always)]
@@ -40,26 +44,26 @@ public class DungeonGenerator : MonoBehaviour
     {
         yield return _coroutine = StartCoroutine(GenerateRoom());
         yield return _coroutine = StartCoroutine(GenerateDoors());
-        yield return _coroutine = StartCoroutine(CreateNodes());
         SoundManager.PlaySound("ding");
     }
     
     private IEnumerator GenerateRoom()
     {
-        bool x = Random.Range(0, 2) != 0;
+        DungeonNode selected = new("Room", RectInt.zero);
 
-        RectInt selected = new();
-        foreach (RectInt rect in _rects)
-            if(rect.size.x > selected.width && rect.size.x > selected.height || rect.size.y > selected.width && rect.size.y > selected.height)
-                selected = rect;
-        
-        if (selected.width * 0.5f < _minimumRoomSize.x && selected.height * 0.5f < _minimumRoomSize.y)
+        foreach (DungeonNode node in _dungeonNodes)
         {
-            yield break;
+            if(node.Rect.size.x > selected.Rect.width && node.Rect.x > selected.Rect.height || node.Rect.size.y > selected.Rect.width && node.Rect.size.y > selected.Rect.height)
+                selected = node;
         }
             
         
-        if(selected.width > selected.height)
+        if (selected.Rect.width * 0.5f < _minimumRoomSize.x && selected.Rect.height * 0.5f < _minimumRoomSize.y)
+        {
+            yield break;
+        }
+
+        if(selected.Rect.width > selected.Rect.height)
             SplitRectX(selected);
         else
             SplitRectY(selected);
@@ -72,120 +76,182 @@ public class DungeonGenerator : MonoBehaviour
     private void Reset()
     {
         StopCoroutine(_coroutine);
-        _rects.Clear();
-        _doors.Clear();
-        _rects.Add(new RectInt(new Vector2Int(0,0), _startRoomSize));
+        _dungeonNodes.Clear();
     }
 
-    private void SplitRectX(RectInt rect)
+    private void SplitRectX(DungeonNode node)
     {
-        int width = rect.width;
+        int width = node.Rect.width;
 
         int random = 0;
         while (_minimumRoomSize.x > random)
             random = (int)Random.Range(width * 0.3f, width * 0.7f);
 
-        Vector2Int position = rect.position;
+        Vector2Int position = node.Rect.position;
         
-        _rects.Add(new RectInt(position, new Vector2Int(random, rect.height)));
         
-        _rects.Add(new RectInt(new Vector2Int(position.x + random, position.y), new Vector2Int(width - random, rect.height)));
+        _dungeonNodes.Add(new DungeonNode("Room", new RectInt(position, new Vector2Int(random, node.Rect.height))));
         
-        _rects.Remove(rect);
+        _dungeonNodes.Add(new DungeonNode("Room", new RectInt(new Vector2Int(position.x + random, position.y), new Vector2Int(width - random, node.Rect.height))));
+        
+        _dungeonNodes.Remove(node);
     }
     
-    private void SplitRectY(RectInt rect)
+    private void SplitRectY(DungeonNode node)
     {
-        int height = rect.height;
+        int height = node.Rect.height;
         
         int random = 0;
         while (_minimumRoomSize.y > random)
             random = (int)Random.Range(height * 0.3f, height * 0.7f);
         
-        Vector2Int position = rect.position;
+        Vector2Int position = node.Rect.position;
         
-        // Base Rect
-        _rects.Add(new RectInt(position, new Vector2Int(rect.width, random)));
+        _dungeonNodes.Add(new DungeonNode("Room", new RectInt(position, new Vector2Int(node.Rect.width, random))));
         
-        // New Rect
-        _rects.Add(new RectInt(new Vector2Int(position.x, position.y + random), new Vector2Int(rect.width, height - random)));
+        _dungeonNodes.Add(new DungeonNode("Room", new RectInt(new Vector2Int(position.x, position.y + random), new Vector2Int(node.Rect.width, height - random))));
         
-        _rects.Remove(rect);
+        _dungeonNodes.Remove(node);
     }
 
     private IEnumerator GenerateDoors()
     {
-        for (int i = 0; i < _rects.Count; i++)
+        
+        for (int i = 0; i < _dungeonNodes.Count; i++)
         {
-            for (int j = i + 1; j < _rects.Count; j++)
+            for (int j = i + 1; j < _dungeonNodes.Count; j++)
             {
-                var rect1 = _rects[i];
-                var rect2 = _rects[j];
+                if(_dungeonNodes[i].Type == "Door" || _dungeonNodes[j].Type == "Door") continue;
+                
+                var rect1 = _dungeonNodes[i].Rect;
+                var rect2 = _dungeonNodes[j].Rect;
                 
                 if (!AlgorithmsUtils.Intersects(rect1, rect2)) continue;
                 
                 yield return new WaitForSeconds(0.2f);
-                PlaceDoor(rect1, rect2);
+                PlaceDoor(_dungeonNodes[i], _dungeonNodes[j]);
             }
         }
         
         yield return null;
     }
 
-    private void PlaceDoor(RectInt rect1, RectInt rect2)
+    private void PlaceDoor(DungeonNode node1, DungeonNode node2)
     {
-            float mina = Mathf.Min(rect1.position.x + rect1.width, rect2.position.x + rect2.width);
-            float maxa= Mathf.Max(rect1.position.x, rect2.position.x);
-            
-            float minb = Mathf.Min(rect1.position.y + rect1.height, rect2.position.y + rect2.height);
-            float maxb = Mathf.Max(rect1.position.y, rect2.position.y);
-            
-            if (rect1.position.y < rect2.position.y)
-            {
-                _doors.Add(new RectInt(new Vector2Int(
-                        (int)Random.Range(mina, maxa),
-                        rect1.position.y + rect1.size.y-1
-                    ),
-                    new Vector2Int(1, 1)));
-            }
-            else if (rect1.position.y > rect2.position.y)
-            {
-                _doors.Add(new RectInt(new Vector2Int(
-                        (int)Random.Range(mina, maxa),
-                        rect1.position.y
-                    ),
-                    new Vector2Int(1, 1)));
-            }
-            else if (rect1.position.x < rect2.position.x)
-            {
-                _doors.Add(new RectInt(new Vector2Int(
-                        rect1.position.x + rect1.size.x,
-                        (int)Random.Range(minb, maxb)
-                    ),
-                    new Vector2Int(1, 1)));
-            }
-            else if (rect1.position.x > rect2.position.x)
-            {
-                _doors.Add(new RectInt(new Vector2Int(
-                        rect1.position.x,
-                        (int)Random.Range(minb, maxb)
-                    ),
-                    new Vector2Int(1, 1)));
-            }
+        var rect1 = node1.Rect;
+        var rect2 = node2.Rect;
+
+        if (IsDiagonallyAdjacent(rect1, rect2)) return;
+        
+         TryAddDoorHorizontal(node1, node2);
+         TryAddDoorVertical(node1, node2);
     }
 
-    private IEnumerator CreateNodes()
+    private void TryAddDoorHorizontal(DungeonNode node1, DungeonNode node2)
     {
-        foreach (var door in _doors)
-        {
-            _dungeonNodes.Add(new DungeonNode(door.position));
-        }
-
-        foreach (var rect in _rects)
-        {
-            _dungeonNodes.Add(new DungeonNode(rect.position + rect.size/2));
-        }
+        var rect1 = node1.Rect;
+        var rect2 = node2.Rect;
         
-        yield return null;
+        float min = Mathf.Max(rect1.position.x, rect2.position.x);
+        float max = Mathf.Min(rect1.position.x + rect1.width, rect2.position.x + rect2.width);
+        
+        if (rect2.position.y == rect1.position.y + rect1.height)
+        {
+            var newRect = new RectInt(new Vector2Int(
+                    (int)Mathf.Floor(min + (max - min) / 2),
+                    rect1.position.y + rect1.size.y
+                ),
+                new Vector2Int(1, 1));
+                
+            var newNode = new DungeonNode("Door", newRect);
+                
+            newNode.Neighbors.Add(node1);
+            newNode.Neighbors.Add(node2);
+            node1.Neighbors.Add(newNode);
+            node2.Neighbors.Add(newNode);
+                
+            _dungeonNodes.Add(newNode);
+        }
+        else if (rect1.position.y == rect2.position.y + rect2.height)
+        {
+            var newRect = new RectInt(new Vector2Int(
+                    (int)Mathf.Floor(min + (max - min) / 2),
+                    rect1.position.y
+                ),
+                new Vector2Int(1, 1));
+                
+            var newNode = new DungeonNode("Door", newRect);
+                
+            newNode.Neighbors.Add(node1);
+            newNode.Neighbors.Add(node2);
+            node1.Neighbors.Add(newNode);
+            node2.Neighbors.Add(newNode);
+                
+            _dungeonNodes.Add(newNode);
+        }
+    }
+    
+    private void TryAddDoorVertical(DungeonNode node1, DungeonNode node2)
+    {
+        var rect1 = node1.Rect;
+        var rect2 = node2.Rect;
+        
+        float min = Mathf.Max(rect1.position.y, rect2.position.y) + (rect1.height * 0.3f);
+        float max = Mathf.Min(rect1.position.y + rect1.height, rect2.position.y + rect2.height) - (rect1.height * 0.3f);
+        
+        if (rect2.position.x == rect1.position.x + rect1.width)
+        {
+            var newRect = new RectInt(new Vector2Int(
+                    rect1.position.x + rect1.size.x,
+                    (int)Mathf.Floor(min + (max - min) / 2)
+                ),
+                new Vector2Int(1, 1));
+                
+            var newNode = new DungeonNode("Door", newRect);
+                
+            newNode.Neighbors.Add(node1);
+            newNode.Neighbors.Add(node2);
+            node1.Neighbors.Add(newNode);
+            node2.Neighbors.Add(newNode);
+                
+            _dungeonNodes.Add(newNode);
+        }
+        else if (rect1.position.x == rect2.position.x + rect2.width)
+        {
+            var newRect = new RectInt(new Vector2Int(
+                    rect1.position.x,
+                    (int)Mathf.Floor(min + (max - min) / 2)
+                ),
+                new Vector2Int(1, 1));
+                
+            var newNode = new DungeonNode("Door", newRect);
+                
+            newNode.Neighbors.Add(node1);
+            newNode.Neighbors.Add(node2);
+            node1.Neighbors.Add(newNode);
+            node2.Neighbors.Add(newNode);
+                
+            _dungeonNodes.Add(newNode);
+        }
+    }
+    
+    private bool IsDiagonallyAdjacent(RectInt a, RectInt b)
+    {
+        var aBottomRight = new Vector2Int(a.xMax, a.yMin);
+        var aTopRight = new Vector2Int(a.xMax, a.yMax);
+        var aTopLeft = new Vector2Int(a.xMin, a.yMax);
+        var aBottomLeft = new Vector2Int(a.xMin, a.yMin);
+
+        var bBottomRight = new Vector2Int(b.xMax, b.yMin);
+        var bTopRight = new Vector2Int(b.xMax, b.yMax);
+        var bTopLeft = new Vector2Int(b.xMin, b.yMax);
+        var bBottomLeft = new Vector2Int(b.xMin, b.yMin);
+        
+        if (aTopRight == bBottomLeft) return true;
+        if (aBottomRight == bTopLeft) return true;
+        if (aTopLeft == bBottomRight) return true;
+        if (aBottomLeft == bTopRight) return true;
+
+        return false;
     }
 }

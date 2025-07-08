@@ -64,4 +64,9 @@ public class AlgorithmsUtils
     {
         DebugExtension.DebugBounds(new Bounds(new Vector3(rectInt.center.x, 0, rectInt.center.y), new Vector3(rectInt.width, height, rectInt.height)), color, duration, depthTest);
     }
+
+    public static Vector3 Vector2IntToVector3(Vector2Int vector2Int)
+    {
+        return new Vector3(vector2Int.x, 0, vector2Int.y);
+    }
 }

@@ -4,11 +4,14 @@ using UnityEngine.UIElements;
 
 public class DungeonNode
 {
-    private List<DungeonNode> Neighbors = new();
-    public RectInt Bounds;
+    public string Type;
+    public List<DungeonNode> Neighbors = new();
+    public RectInt Rect;
+    public Vector2Int Center => Rect.position + Rect.size / 2;
 
-    public DungeonNode(RectInt bounds)
+    public DungeonNode(string type, RectInt rect)
     {
-        RectInt Bounds = bounds;
+        Type = type;
+        Rect = rect;
     }
 }
