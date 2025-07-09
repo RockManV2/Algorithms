@@ -1,6 +1,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NaughtyAttributes;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -44,6 +45,9 @@ public class DungeonGenerator : MonoBehaviour
     {
         yield return _coroutine = StartCoroutine(GenerateRoom());
         yield return _coroutine = StartCoroutine(GenerateDoors());
+        
+        if(!DFS(_dungeonNodes))
+            Debug.LogWarning("Not all nodes are connected");
         
         SoundManager.PlaySound("ding");
     }
@@ -251,5 +255,29 @@ public class DungeonGenerator : MonoBehaviour
         if (aBottomLeft == bTopRight) return true;
 
         return false;
+    }
+
+    private bool DFS(List<DungeonNode> graph)
+    {
+        DungeonNode root = graph[0];
+        
+        var visited = new List<DungeonNode>();
+        var stack = new Stack<DungeonNode>();
+    
+        stack.Push(root);
+    
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+
+            if (visited.Contains(node)) continue;
+            
+            visited.Add(node);
+            
+            foreach (var neighboringCity in node.Neighbors)
+                stack.Push(neighboringCity);
+        }
+
+        return visited.Count == graph.Count;
     }
 }
