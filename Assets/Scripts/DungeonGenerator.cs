@@ -44,31 +44,32 @@ public class DungeonGenerator : MonoBehaviour
     {
         yield return _coroutine = StartCoroutine(GenerateRoom());
         yield return _coroutine = StartCoroutine(GenerateDoors());
+        
         SoundManager.PlaySound("ding");
     }
     
     private IEnumerator GenerateRoom()
     {
-        DungeonNode selected = new("Room", RectInt.zero);
+        DungeonNode selected = new("Empty", RectInt.zero);
 
         foreach (DungeonNode node in _dungeonNodes)
         {
-            if(node.Rect.size.x > selected.Rect.width && node.Rect.x > selected.Rect.height || node.Rect.size.y > selected.Rect.width && node.Rect.size.y > selected.Rect.height)
+            if (node.Rect.width >= _minimumRoomSize.x * 2 || node.Rect.height >= _minimumRoomSize.y * 2)
+            {
                 selected = node;
+                break;
+            }
         }
-            
         
-        if (selected.Rect.width * 0.5f < _minimumRoomSize.x && selected.Rect.height * 0.5f < _minimumRoomSize.y)
-        {
+        if(selected.Type == "Empty")
             yield break;
-        }
-
+        
         if(selected.Rect.width > selected.Rect.height)
             SplitRectX(selected);
         else
             SplitRectY(selected);
 
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(0.05f);
         yield return StartCoroutine(GenerateRoom());
     }
     
@@ -77,15 +78,14 @@ public class DungeonGenerator : MonoBehaviour
     {
         StopCoroutine(_coroutine);
         _dungeonNodes.Clear();
+        Start();
     }
 
     private void SplitRectX(DungeonNode node)
     {
         int width = node.Rect.width;
-
-        int random = 0;
-        while (_minimumRoomSize.x > random)
-            random = (int)Random.Range(width * 0.3f, width * 0.7f);
+        
+        int random = Random.Range(_minimumRoomSize.x, width - _minimumRoomSize.x);
 
         Vector2Int position = node.Rect.position;
         
@@ -101,9 +101,7 @@ public class DungeonGenerator : MonoBehaviour
     {
         int height = node.Rect.height;
         
-        int random = 0;
-        while (_minimumRoomSize.y > random)
-            random = (int)Random.Range(height * 0.3f, height * 0.7f);
+        int random = Random.Range(_minimumRoomSize.y, height - _minimumRoomSize.y);
         
         Vector2Int position = node.Rect.position;
         
@@ -128,7 +126,7 @@ public class DungeonGenerator : MonoBehaviour
                 
                 if (!AlgorithmsUtils.Intersects(rect1, rect2)) continue;
                 
-                yield return new WaitForSeconds(0.2f);
+                yield return new WaitForSeconds(0.05f);
                 PlaceDoor(_dungeonNodes[i], _dungeonNodes[j]);
             }
         }
