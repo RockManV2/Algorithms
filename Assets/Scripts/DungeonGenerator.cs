@@ -8,12 +8,14 @@ using Random = UnityEngine.Random;
 
 public class DungeonGenerator : MonoBehaviour
 {
+    public delegate void DungeonEvent(List<DungeonNode> nodes);
+    public DungeonEvent OnDungeonGenerationComplete;
+    
     [SerializeField] private Vector2Int _startRoomSize;
     [SerializeField] private Vector2Int _minimumRoomSize;
     [SerializeField] private float _delay;
     
     private readonly List<DungeonNode> _dungeonNodes = new();
-    
     private Coroutine _coroutine;
     
     private void Start()
@@ -50,6 +52,7 @@ public class DungeonGenerator : MonoBehaviour
         if(!DFS(_dungeonNodes))
             Debug.LogWarning("Not all nodes are connected");
         
+        OnDungeonGenerationComplete?.Invoke(_dungeonNodes);
         SoundManager.PlaySound("ding");
     }
     
