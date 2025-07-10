@@ -11,7 +11,8 @@ public class DungeonGenerator : MonoBehaviour
     public delegate void DungeonEvent(List<DungeonNode> nodes);
     public Vector2Int StartRoomSize;
     public DungeonEvent OnDungeonGenerationComplete;
-    
+
+    [SerializeField] private bool _showDebugLines;
     [SerializeField] private Vector2Int _minimumRoomSize;
     [SerializeField] private float _delay;
     
@@ -27,6 +28,8 @@ public class DungeonGenerator : MonoBehaviour
 
     private void Update()
     {
+        if(!_showDebugLines) return;
+        
         foreach (var node in _dungeonNodes)
             if (node.Type == "Room")
             {

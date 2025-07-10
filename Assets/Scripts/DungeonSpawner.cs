@@ -1,6 +1,10 @@
 
+using System.Collections;
 using System.Collections.Generic;
+using NaughtyAttributes;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class DungeonSpawner : MonoBehaviour
 {
@@ -10,18 +14,22 @@ public class DungeonSpawner : MonoBehaviour
     [SerializeField] private GameObject _cornerPrefab;
     
     private Dictionary<Vector3, GameObject> _dungeonMap = new();
-    
-    private void Awake() =>
+    [SerializeField] private NavMeshSurface _floorSurface;
+
+    private void Awake()
+    {
         _dungeonGenerator = GetComponent<DungeonGenerator>();
+    }
 
     private void Start() =>
         _dungeonGenerator.OnDungeonGenerationComplete += SpawnDungeon;
     
     private void SpawnDungeon(List<DungeonNode> dungeonNodes)
     {
+        GenerateFloor();
         GenerateWalls(dungeonNodes);
         GenerateDoors(dungeonNodes);
-        GenerateFloor();
+         StartCoroutine(BakeFloor());
     }
 
     private void GenerateWalls(List<DungeonNode> dungeonNodes)
@@ -97,5 +105,20 @@ public class DungeonSpawner : MonoBehaviour
             new Vector3(_dungeonGenerator.StartRoomSize.x * 0.1f, 1, _dungeonGenerator.StartRoomSize.y * 0.1f);
         
         floor.transform.position = new Vector3(_dungeonGenerator.StartRoomSize.x, -0.5f, _dungeonGenerator.StartRoomSize.y ) / 2;
+
+        _floorSurface = floor.GetComponent<NavMeshSurface>();
+    }
+
+    [Button(enabledMode: EButtonEnableMode.Always)]
+    private IEnumerator BakeFloor()
+    {
+        yield return new WaitForSeconds(1);
+        if (_floorSurface != null)
+        {
+            // Honorary mention
+            // Debug.Log("Yippie2bomba");
+            _floorSurface.BuildNavMesh();
+        }
+            
     }
 }
