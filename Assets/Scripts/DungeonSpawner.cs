@@ -94,8 +94,8 @@ public class DungeonSpawner : MonoBehaviour
     {
         var floor = Instantiate(_floorPrefab, transform.position, Quaternion.identity);
         floor.transform.localScale =
-            new Vector3(_dungeonGenerator.StartRoomSize.x * 0.1f, 0, _dungeonGenerator.StartRoomSize.y * 0.1f);
+            new Vector3(_dungeonGenerator.StartRoomSize.x * 0.1f, 1, _dungeonGenerator.StartRoomSize.y * 0.1f);
         
-        floor.transform.position = new Vector3(_dungeonGenerator.StartRoomSize.x, 0, _dungeonGenerator.StartRoomSize.y ) / 2;
+        floor.transform.position = new Vector3(_dungeonGenerator.StartRoomSize.x, -0.5f, _dungeonGenerator.StartRoomSize.y ) / 2;
     }
 }
