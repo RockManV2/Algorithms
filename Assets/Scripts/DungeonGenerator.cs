@@ -161,6 +161,8 @@ public class DungeonGenerator : MonoBehaviour
         float min = Mathf.Max(rect1.position.x, rect2.position.x);
         float max = Mathf.Min(rect1.position.x + rect1.width, rect2.position.x + rect2.width);
 
+        if(max - min <= 1) return;
+        
         int offsetY;
 
         if (rect2.position.y == rect1.position.y + rect1.height)
@@ -191,8 +193,10 @@ public class DungeonGenerator : MonoBehaviour
         var rect1 = node1.Rect;
         var rect2 = node2.Rect;
         
-        float min = Mathf.Max(rect1.position.y, rect2.position.y) + (rect1.height * 0.3f);
-        float max = Mathf.Min(rect1.position.y + rect1.height, rect2.position.y + rect2.height) - (rect1.height * 0.3f);
+        float min = Mathf.Max(rect1.position.y, rect2.position.y);
+        float max = Mathf.Min(rect1.position.y + rect1.height, rect2.position.y + rect2.height);
+        
+        if(max - min <= 1) return;
         
         int offsetX = 0;
         
