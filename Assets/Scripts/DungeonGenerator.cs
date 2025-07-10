@@ -176,7 +176,7 @@ public class DungeonGenerator : MonoBehaviour
             return;
         
         var newRect = new RectInt(new Vector2Int(
-                (int)Mathf.Floor(min + (max - min) / 2),
+                Mathf.RoundToInt( Random.Range(min+1, max-1)),
                 offsetY
             ),
             new Vector2Int(1, 1));
@@ -212,7 +212,7 @@ public class DungeonGenerator : MonoBehaviour
         
         var newRect = new RectInt(new Vector2Int(
                 offsetX,
-                (int)Mathf.Floor(min + (max - min) / 2)
+                Mathf.RoundToInt( Random.Range(min+1, max-1))
             ),
             new Vector2Int(1, 1));
                 
