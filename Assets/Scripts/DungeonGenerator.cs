@@ -10,6 +10,7 @@ public class DungeonGenerator : MonoBehaviour
 {
     [SerializeField] private Vector2Int _startRoomSize;
     [SerializeField] private Vector2Int _minimumRoomSize;
+    [SerializeField] private float _delay;
     
     private readonly List<DungeonNode> _dungeonNodes = new();
     
@@ -73,7 +74,7 @@ public class DungeonGenerator : MonoBehaviour
         else
             SplitRectY(selected);
 
-        yield return new WaitForSeconds(0.05f);
+        yield return new WaitForSeconds(_delay);
         yield return StartCoroutine(GenerateRoom());
     }
     
@@ -130,7 +131,7 @@ public class DungeonGenerator : MonoBehaviour
                 
                 if (!AlgorithmsUtils.Intersects(rect1, rect2)) continue;
                 
-                yield return new WaitForSeconds(0.05f);
+                yield return new WaitForSeconds(_delay);
                 PlaceDoor(_dungeonNodes[i], _dungeonNodes[j]);
             }
         }
