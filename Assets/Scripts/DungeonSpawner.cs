@@ -7,7 +7,6 @@ public class DungeonSpawner : MonoBehaviour
     private DungeonGenerator _dungeonGenerator;
     [SerializeField] private GameObject _wallPrefab;
     [SerializeField] private GameObject _floorPrefab;
-    [SerializeField] private GameObject _doorPrefab;
     [SerializeField] private GameObject _cornerPrefab;
     
     private Dictionary<Vector3, GameObject> _dungeonMap = new();
@@ -22,6 +21,7 @@ public class DungeonSpawner : MonoBehaviour
     {
         GenerateWalls(dungeonNodes);
         GenerateDoors(dungeonNodes);
+        GenerateFloor();
     }
 
     private void GenerateWalls(List<DungeonNode> dungeonNodes)
@@ -75,17 +75,6 @@ public class DungeonSpawner : MonoBehaviour
                     _dungeonMap[bottomWallPosition] = y;
                 }
             }
-
-            for (int i = 0; i < node.Rect.width; i++)
-            {
-                for (int j = 0; j < node.Rect.height; j++)
-                {
-                    Vector3 floorPosition = AlgorithmsUtils.Vector2IntToVector3(node.Rect.position);
-                    floorPosition += new Vector3(i,0,j);
-                            
-                    Instantiate(_floorPrefab, floorPosition, Quaternion.identity);
-                }
-            }
         }
     }
     
@@ -96,10 +85,17 @@ public class DungeonSpawner : MonoBehaviour
             if (node.Type != "Door") continue;
 
             var wall = _dungeonMap[AlgorithmsUtils.Vector2IntToVector3(node.Rect.position)];
-
-            // Instantiate(_doorPrefab, wall.transform.position, wall.transform.rotation);
             
             Destroy(wall);
         }
+    }
+
+    private void GenerateFloor()
+    {
+        var floor = Instantiate(_floorPrefab, transform.position, Quaternion.identity);
+        floor.transform.localScale =
+            new Vector3(_dungeonGenerator.StartRoomSize.x * 0.1f, 0, _dungeonGenerator.StartRoomSize.y * 0.1f);
+        
+        floor.transform.position = new Vector3(_dungeonGenerator.StartRoomSize.x, 0, _dungeonGenerator.StartRoomSize.y ) / 2;
     }
 }

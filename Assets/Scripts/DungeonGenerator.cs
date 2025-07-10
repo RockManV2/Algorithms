@@ -9,9 +9,9 @@ using Random = UnityEngine.Random;
 public class DungeonGenerator : MonoBehaviour
 {
     public delegate void DungeonEvent(List<DungeonNode> nodes);
+    public Vector2Int StartRoomSize;
     public DungeonEvent OnDungeonGenerationComplete;
     
-    [SerializeField] private Vector2Int _startRoomSize;
     [SerializeField] private Vector2Int _minimumRoomSize;
     [SerializeField] private float _delay;
     
@@ -20,7 +20,7 @@ public class DungeonGenerator : MonoBehaviour
     
     private void Start()
     {
-        var rect1 = new RectInt(new Vector2Int(0,0), _startRoomSize);
+        var rect1 = new RectInt(new Vector2Int(0,0), StartRoomSize);
         
         _dungeonNodes.Add(new DungeonNode("Room", rect1));
     }
