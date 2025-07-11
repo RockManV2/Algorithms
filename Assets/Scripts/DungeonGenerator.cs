@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NaughtyAttributes;
+using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -20,6 +21,7 @@ public class DungeonGenerator : MonoBehaviour
     
     private readonly List<DungeonNode> _dungeonNodes = new();
     private Coroutine _coroutine;
+    private bool _roomGenSuccess;
     
     #region Lifetime Methods
     private void Start()
@@ -60,6 +62,12 @@ public class DungeonGenerator : MonoBehaviour
         yield return _coroutine = StartCoroutine(GenerateRoom());
         yield return _coroutine = StartCoroutine(GenerateDoors());
         yield return _coroutine = StartCoroutine(RemoveRooms());
+
+        if (!_roomGenSuccess)
+        {
+            Debug.LogWarning("Room Generation Failed; Not all rooms are connected.");
+            yield break;
+        }
         
         if(!Dfs(_dungeonNodes))
             Debug.LogWarning("Not all nodes are connected");
@@ -137,7 +145,7 @@ public class DungeonGenerator : MonoBehaviour
         var sortedRooms = roomNodes.OrderBy(node => node.Rect.width * node.Rect.height);
 
         // Loops for 10% of the size of _dungeonNodes, and removes them. (The smallest rooms)
-        for (int i = 0; i < _dungeonNodes.Count * 0.1f; i++)
+        for (int i = 0; i < _dungeonNodes.Count * 0.3f; i++)
         {
             yield return new WaitForSeconds(_delay);
             DungeonNode selectedRoom = sortedRooms.ElementAt(i);
@@ -154,12 +162,7 @@ public class DungeonGenerator : MonoBehaviour
             
             _dungeonNodes.Remove(selectedRoom);
             
-            if (!Dfs(_dungeonNodes))
-            {
-                Reset();
-                StartCoroutine(GenerateRoom());
-                yield break;
-            }
+            _roomGenSuccess = Dfs(_dungeonNodes);
         }
     }
     #endregion
