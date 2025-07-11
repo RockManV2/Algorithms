@@ -12,24 +12,28 @@ public class DungeonSpawner : MonoBehaviour
     [SerializeField] private GameObject _wallPrefab;
     [SerializeField] private GameObject _floorPrefab;
     [SerializeField] private GameObject _cornerPrefab;
+    [SerializeField] private Transform _dungeonParent;
     
     private Dictionary<Vector3, GameObject> _dungeonMap = new();
-    [SerializeField] private NavMeshSurface _floorSurface;
-
-    private void Awake()
-    {
+    private NavMeshSurface _floorSurface;
+    
+    
+    private void Awake() =>
         _dungeonGenerator = GetComponent<DungeonGenerator>();
-    }
 
-    private void Start() =>
+    private void Start()
+    {
         _dungeonGenerator.OnDungeonGenerationComplete += SpawnDungeon;
+        _dungeonGenerator.OnDungeonReset += (_) => Reset();
+    }
+        
     
     private void SpawnDungeon(List<DungeonNode> dungeonNodes)
     {
         GenerateFloor();
         GenerateWalls(dungeonNodes);
         GenerateDoors(dungeonNodes);
-         StartCoroutine(BakeFloor());
+        StartCoroutine(BakeFloor());
     }
 
     private void GenerateWalls(List<DungeonNode> dungeonNodes)
@@ -46,7 +50,7 @@ public class DungeonSpawner : MonoBehaviour
                 
                 if (!_dungeonMap.ContainsKey(leftWallPosition))
                 {
-                    var x = Instantiate(_wallPrefab, leftWallPosition, Quaternion.Euler(0,90,0));
+                    var x = Instantiate(_wallPrefab, leftWallPosition, Quaternion.Euler(0,90,0), _dungeonParent);
                 
                     _dungeonMap[leftWallPosition] = x;
                 }
@@ -56,7 +60,7 @@ public class DungeonSpawner : MonoBehaviour
                 
                 if (!_dungeonMap.ContainsKey(rightWallPosition))
                 {
-                    var y = Instantiate(_wallPrefab, rightWallPosition, Quaternion.Euler(0,90,0));
+                    var y = Instantiate(_wallPrefab, rightWallPosition, Quaternion.Euler(0,90,0), _dungeonParent);
                 
                     _dungeonMap[rightWallPosition] = y;
                 }
@@ -69,7 +73,7 @@ public class DungeonSpawner : MonoBehaviour
 
                 if (!_dungeonMap.ContainsKey(topWallPosition))
                 {
-                    var x = Instantiate(_wallPrefab, topWallPosition, Quaternion.identity);
+                    var x = Instantiate(_wallPrefab, topWallPosition, Quaternion.identity, _dungeonParent);
                     _dungeonMap[topWallPosition] = x;
                 }
                 
@@ -79,7 +83,7 @@ public class DungeonSpawner : MonoBehaviour
                 
                 if (!_dungeonMap.ContainsKey(bottomWallPosition))
                 {
-                    var y = Instantiate(_wallPrefab, bottomWallPosition, Quaternion.identity);
+                    var y = Instantiate(_wallPrefab, bottomWallPosition, Quaternion.identity, _dungeonParent);
                     _dungeonMap[bottomWallPosition] = y;
                 }
             }
@@ -100,7 +104,7 @@ public class DungeonSpawner : MonoBehaviour
 
     private void GenerateFloor()
     {
-        var floor = Instantiate(_floorPrefab, transform.position, Quaternion.identity);
+        var floor = Instantiate(_floorPrefab, transform.position, Quaternion.identity, _dungeonParent);
         floor.transform.localScale =
             new Vector3(_dungeonGenerator.StartRoomSize.x * 0.1f, 1, _dungeonGenerator.StartRoomSize.y * 0.1f);
         
@@ -119,6 +123,13 @@ public class DungeonSpawner : MonoBehaviour
             // Debug.Log("Yippie2bomba");
             _floorSurface.BuildNavMesh();
         }
-            
+    }
+
+    private void Reset()
+    {
+        foreach (Transform child in _dungeonParent)
+            Destroy(child.gameObject);
+        
+        _dungeonMap.Clear();
     }
 }

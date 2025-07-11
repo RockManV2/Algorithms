@@ -3,27 +3,31 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NaughtyAttributes;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 public class DungeonGenerator : MonoBehaviour
 {
     public delegate void DungeonEvent(List<DungeonNode> nodes);
-    public Vector2Int StartRoomSize;
     public DungeonEvent OnDungeonGenerationComplete;
-
-    [SerializeField] private bool _showDebugLines;
+    public DungeonEvent OnDungeonReset;
+    
+    public Vector2Int StartRoomSize;
     [SerializeField] private Vector2Int _minimumRoomSize;
     [SerializeField] private float _delay;
+    [SerializeField] private bool _showDebugLines;
     
     private readonly List<DungeonNode> _dungeonNodes = new();
     private Coroutine _coroutine;
     
+    #region Lifetime Methods
     private void Start()
     {
         var rect1 = new RectInt(new Vector2Int(0,0), StartRoomSize);
-        
         _dungeonNodes.Add(new DungeonNode("Room", rect1));
+        
+        OnDungeonReset += (_) => Reset();
     }
 
     private void Update()
@@ -45,14 +49,19 @@ public class DungeonGenerator : MonoBehaviour
                     Debug.DrawLine(AlgorithmsUtils.Vector2IntToVector3(node.Center), AlgorithmsUtils.Vector2IntToVector3(neighbor.Center), Color.yellow);
             }
     }
-
+    #endregion
+    
+    #region Room Generation Methods
     [Button(enabledMode: EButtonEnableMode.Always)]
     private IEnumerator GenerateDungeon()
     {
+        OnDungeonReset?.Invoke(_dungeonNodes);
+        
         yield return _coroutine = StartCoroutine(GenerateRoom());
         yield return _coroutine = StartCoroutine(GenerateDoors());
+        yield return _coroutine = StartCoroutine(RemoveRooms());
         
-        if(!DFS(_dungeonNodes))
+        if(!Dfs(_dungeonNodes))
             Debug.LogWarning("Not all nodes are connected");
         
         OnDungeonGenerationComplete?.Invoke(_dungeonNodes);
@@ -84,14 +93,6 @@ public class DungeonGenerator : MonoBehaviour
         yield return StartCoroutine(GenerateRoom());
     }
     
-    [Button(enabledMode: EButtonEnableMode.Always)]
-    private void Reset()
-    {
-        StopCoroutine(_coroutine);
-        _dungeonNodes.Clear();
-        Start();
-    }
-
     private void SplitRectX(DungeonNode node)
     {
         int width = node.Rect.width;
@@ -123,6 +124,47 @@ public class DungeonGenerator : MonoBehaviour
         _dungeonNodes.Remove(node);
     }
 
+    private IEnumerator RemoveRooms()
+    {
+        // Lists to store all rooms, without doors
+        List<DungeonNode> roomNodes = new();
+
+        foreach (var node in _dungeonNodes)
+            if(node.Type == "Room")
+                roomNodes.Add(node);
+        
+        // Sorts rooms by size, smallest to largest
+        var sortedRooms = roomNodes.OrderBy(node => node.Rect.width * node.Rect.height);
+
+        // Loops for 10% of the size of _dungeonNodes, and removes them. (The smallest rooms)
+        for (int i = 0; i < _dungeonNodes.Count * 0.1f; i++)
+        {
+            yield return new WaitForSeconds(_delay);
+            DungeonNode selectedRoom = sortedRooms.ElementAt(i);
+            
+            // Loops through selected neighbors (The doors) to remove their neighbors references
+            foreach (DungeonNode neighbor in selectedRoom.Neighbors.ToList())
+            {
+                // Loops through the selected neighbor neighbors to remove their neighbor references
+                foreach (var n in neighbor.Neighbors.ToList())
+                    n.Neighbors.Remove(neighbor);
+                
+                _dungeonNodes.Remove(neighbor);
+            }
+            
+            _dungeonNodes.Remove(selectedRoom);
+            
+            if (!Dfs(_dungeonNodes))
+            {
+                Reset();
+                StartCoroutine(GenerateRoom());
+                yield break;
+            }
+        }
+    }
+    #endregion
+    
+    #region Door Generation Methods
     private IEnumerator GenerateDoors()
     {
         
@@ -141,7 +183,6 @@ public class DungeonGenerator : MonoBehaviour
                 PlaceDoor(_dungeonNodes[i], _dungeonNodes[j]);
             }
         }
-        
         yield return null;
     }
 
@@ -245,15 +286,30 @@ public class DungeonGenerator : MonoBehaviour
 
         return false;
     }
+    #endregion
 
-    private bool DFS(List<DungeonNode> graph)
+    #region Misc Methods
+    
+    [Button(enabledMode: EButtonEnableMode.Always)]
+    private void Reset()
     {
-        DungeonNode root = graph[0];
+        if(_coroutine != null)
+            StopCoroutine(_coroutine);
+        
+        _dungeonNodes.Clear();
+        
+        var rect1 = new RectInt(new Vector2Int(0,0), StartRoomSize);
+        _dungeonNodes.Add(new DungeonNode("Room", rect1));
+    }
+    
+    private bool Dfs(List<DungeonNode> graph)
+    {
+        DungeonNode rootNode = graph[0];
         
         var visited = new List<DungeonNode>();
         var stack = new Stack<DungeonNode>();
     
-        stack.Push(root);
+        stack.Push(rootNode);
     
         while (stack.Count > 0)
         {
@@ -263,10 +319,12 @@ public class DungeonGenerator : MonoBehaviour
             
             visited.Add(node);
             
-            foreach (var neighboringCity in node.Neighbors)
-                stack.Push(neighboringCity);
+            foreach (var neighbor in node.Neighbors)
+                stack.Push(neighbor);
         }
 
         return visited.Count == graph.Count;
     }
+    #endregion
+
 }
