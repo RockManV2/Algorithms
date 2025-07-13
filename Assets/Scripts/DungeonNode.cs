@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 public class DungeonNode
 {
     public string Type;
-    public List<DungeonNode> Neighbors = new();
+    public HashSet<DungeonNode> Neighbors = new();
     public RectInt Rect;
     public Vector2Int Center => Rect.position + Rect.size / 2;
 

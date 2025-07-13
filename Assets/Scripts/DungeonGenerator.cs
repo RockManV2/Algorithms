@@ -54,6 +54,12 @@ public class DungeonGenerator : MonoBehaviour
     #endregion
     
     #region Room Generation Methods
+    /// <summary>
+    /// Method that starts the dungeon generation.
+    /// First it clears all previous dungeon generation stuff, then creates rooms, the doors & the connection between
+    /// the doors and room. It removes 10% of smallest rooms.
+    /// </summary>
+    /// <returns></returns>
     [Button(enabledMode: EButtonEnableMode.Always)]
     private IEnumerator GenerateDungeon()
     {
@@ -78,6 +84,11 @@ public class DungeonGenerator : MonoBehaviour
         SoundManager.PlaySound("ding");
     }
     
+    /// <summary>
+    /// Recursive method to create rooms, it calls the SplitRectX and SplitRectY methods to create smaller rooms, and
+    /// stops when there are no rooms big enough to split.
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator GenerateRoom()
     {
         DungeonNode selected = new("Empty", RectInt.zero);
@@ -134,29 +145,29 @@ public class DungeonGenerator : MonoBehaviour
         _dungeonNodes.Remove(node);
     }
 
+    /// <summary>
+    /// Removes the smallest 10% of rooms. Sorts all rooms from smallest to biggest and loops through the first 10
+    /// (the smallest) and removes connections to them and the nodes themselfs.
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator RemoveRooms()
     {
-        // Lists to store all rooms, without doors
         List<DungeonNode> roomNodes = new();
 
         foreach (var node in _dungeonNodes)
             if(node.Type == "Room")
                 roomNodes.Add(node);
         
-        // Sorts rooms by size, smallest to largest
         var sortedRooms = roomNodes.OrderBy(node => node.Rect.width * node.Rect.height);
 
-        // Loops for 10% of the size of _dungeonNodes, and removes them. (The smallest rooms)
         for (int i = 0; i < _dungeonNodes.Count * 0.1f; i++)
         {
             DungeonNode selectedRoom = sortedRooms.ElementAt(i);
             
-            // Loops through selected neighbors (The doors) to remove their neighbors references
             foreach (DungeonNode neighbor in selectedRoom.Neighbors.ToList())
             {
-                // Loops through the selected neighbor neighbors to remove their neighbor references
-                foreach (var n in neighbor.Neighbors.ToList())
-                    n.Neighbors.Remove(neighbor);
+                foreach (DungeonNode neighborsNeighbor in neighbor.Neighbors.ToList())
+                    neighborsNeighbor.Neighbors.Remove(neighbor);
                 
                 _dungeonNodes.Remove(neighbor);
             }
@@ -171,9 +182,15 @@ public class DungeonGenerator : MonoBehaviour
     #endregion
     
     #region Door Generation Methods
+    /// <summary>
+    /// Generates doors and connections between doors and rooms. It checks collisions between rooms without any redundant
+    /// checks and creates a door if they are correctly adjacent.
+    /// If a door is places its the 2 rooms it is generated between will be added to its neighbors, and the door will be
+    /// added to the rooms neighbors.
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator GenerateDoors()
     {
-        
         for (int i = 0; i < _dungeonNodes.Count; i++)
         {
             for (int j = i + 1; j < _dungeonNodes.Count; j++)
@@ -192,6 +209,7 @@ public class DungeonGenerator : MonoBehaviour
         yield return null;
     }
 
+    // Checks if the doors are not diagonally adjacent, if theyre not try generating doors.
     private void PlaceDoor(DungeonNode node1, DungeonNode node2)
     {
         var rect1 = node1.Rect;
@@ -203,6 +221,9 @@ public class DungeonGenerator : MonoBehaviour
          TryAddDoorVertical(node1, node2);
     }
 
+    /// <summary>
+    /// Generates a door between the minimum and maximum point of collision.
+    /// </summary>
     private void TryAddDoorHorizontal(DungeonNode node1, DungeonNode node2)
     {
         var rect1 = node1.Rect;
@@ -238,6 +259,9 @@ public class DungeonGenerator : MonoBehaviour
         _dungeonNodes.Add(newNode);
     }
     
+    /// <summary>
+    /// Generates a door between the minimum and maximum point of collision.
+    /// </summary>
     private void TryAddDoorVertical(DungeonNode node1, DungeonNode node2)
     {
         var rect1 = node1.Rect;
@@ -273,6 +297,10 @@ public class DungeonGenerator : MonoBehaviour
         _dungeonNodes.Add(newNode);
     }
     
+    /// <summary>
+    /// Checks if the rooms are adjacent by comparing the positions of the corners of two rects.
+    /// Why did nobody tell me xMax, xMin, yMax and yMin where a things before ;.;
+    /// </summary>
     private bool IsDiagonallyAdjacent(RectInt a, RectInt b)
     {
         var aBottomRight = new Vector2Int(a.xMax, a.yMin);
@@ -296,6 +324,9 @@ public class DungeonGenerator : MonoBehaviour
 
     #region Misc Methods
     
+    /// <summary>
+    /// Resets all dungeon generation so I dont need to restart the scene.
+    /// </summary>
     [Button(enabledMode: EButtonEnableMode.Always)]
     private void Reset()
     {
@@ -308,6 +339,9 @@ public class DungeonGenerator : MonoBehaviour
         _dungeonNodes.Add(new DungeonNode("Room", rect1));
     }
     
+    /// <summary>
+    ///  Uses DFS to check if all nodes are adjacent, true if it is false if its not.
+    /// </summary>
     private bool Dfs(List<DungeonNode> graph)
     {
         DungeonNode rootNode = graph[0];

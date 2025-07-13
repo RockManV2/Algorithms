@@ -13,30 +13,38 @@ public class DungeonSpawner : MonoBehaviour
     [SerializeField] private GameObject _floorPrefab;
     [SerializeField] private GameObject _cornerPrefab;
     [SerializeField] private Transform _dungeonParent;
+
+    [SerializeField] private float _delay;
     
     private Dictionary<Vector3, GameObject> _dungeonMap = new();
     private NavMeshSurface _floorSurface;
     
     
+    // Get refrence(s)
     private void Awake() =>
         _dungeonGenerator = GetComponent<DungeonGenerator>();
 
+    // Subscribe methods to events with some lambda sorcery
     private void Start()
     {
-        _dungeonGenerator.OnDungeonGenerationComplete += SpawnDungeon;
+        _dungeonGenerator.OnDungeonGenerationComplete += (nodes) => StartCoroutine(SpawnDungeon(nodes));
         _dungeonGenerator.OnDungeonReset += (_) => Reset();
     }
         
-    
-    private void SpawnDungeon(List<DungeonNode> dungeonNodes)
+    // Main method used to create the while 
+    private IEnumerator SpawnDungeon(List<DungeonNode> dungeonNodes)
     {
-        GenerateFloor();
-        GenerateWalls(dungeonNodes);
-        GenerateDoors(dungeonNodes);
+        yield return StartCoroutine(GenerateFloor());
+        yield return StartCoroutine(GenerateWalls(dungeonNodes));
+        yield return StartCoroutine(GenerateDoors(dungeonNodes));
         StartCoroutine(BakeFloor());
     }
 
-    private void GenerateWalls(List<DungeonNode> dungeonNodes)
+    /// <summary>
+    /// Loops through all rooms and generates walls on the 4 sides of the rooms, while checking if it doesnt already
+    /// exist there.
+    /// </summary>
+    private IEnumerator GenerateWalls(List<DungeonNode> dungeonNodes)
     {
         foreach (DungeonNode node in dungeonNodes)
         {
@@ -73,8 +81,8 @@ public class DungeonSpawner : MonoBehaviour
 
                 if (!_dungeonMap.ContainsKey(topWallPosition))
                 {
-                    var x = Instantiate(_wallPrefab, topWallPosition, Quaternion.identity, _dungeonParent);
-                    _dungeonMap[topWallPosition] = x;
+                    var newObject = Instantiate(_wallPrefab, topWallPosition, Quaternion.identity, _dungeonParent);
+                    _dungeonMap[topWallPosition] = newObject;
                 }
                 
                 Vector3 bottomWallPosition =
@@ -87,10 +95,14 @@ public class DungeonSpawner : MonoBehaviour
                     _dungeonMap[bottomWallPosition] = y;
                 }
             }
+            yield return new WaitForSeconds(_delay);
         }
     }
     
-    private void GenerateDoors(List<DungeonNode> dungeonNodes)
+    /// <summary>
+    /// Removes walls at places where doors should be
+    /// </summary>
+    private IEnumerator GenerateDoors(List<DungeonNode> dungeonNodes)
     {
         foreach (DungeonNode node in dungeonNodes)
         {
@@ -99,10 +111,14 @@ public class DungeonSpawner : MonoBehaviour
             var wall = _dungeonMap[AlgorithmsUtils.Vector2IntToVector3(node.Rect.position)];
             
             Destroy(wall);
+            yield return new WaitForSeconds(_delay);
         }
     }
 
-    private void GenerateFloor()
+    /// <summary>
+    /// Generates the floor in the middle of the dungeon at the correct size
+    /// </summary>
+    private IEnumerator GenerateFloor()
     {
         var floor = Instantiate(_floorPrefab, transform.position, Quaternion.identity, _dungeonParent);
         floor.transform.localScale =
@@ -111,8 +127,13 @@ public class DungeonSpawner : MonoBehaviour
         floor.transform.position = new Vector3(_dungeonGenerator.StartRoomSize.x, -0.5f, _dungeonGenerator.StartRoomSize.y ) / 2;
 
         _floorSurface = floor.GetComponent<NavMeshSurface>();
+        yield return new WaitForSeconds(_delay);
     }
 
+    /// <summary>
+    /// Bakes the floor.
+    /// </summary>
+    /// <returns></returns>
     [Button(enabledMode: EButtonEnableMode.Always)]
     private IEnumerator BakeFloor()
     {
@@ -125,6 +146,9 @@ public class DungeonSpawner : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Resets all spawned objects and clears the map dictionary
+    /// </summary>
     private void Reset()
     {
         foreach (Transform child in _dungeonParent)
