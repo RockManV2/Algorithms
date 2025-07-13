@@ -19,7 +19,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private float _delay;
     [SerializeField] private bool _showDebugLines;
     
-    private readonly List<DungeonNode> _dungeonNodes = new();
+    private readonly List<DungeonNode> _dungeonNodes = new(200);
     private Coroutine _coroutine;
     private bool _roomGenSuccess;
     
@@ -71,6 +71,8 @@ public class DungeonGenerator : MonoBehaviour
         
         if(!Dfs(_dungeonNodes))
             Debug.LogWarning("Not all nodes are connected");
+        
+        Debug.Log(_dungeonNodes.Count);
         
         OnDungeonGenerationComplete?.Invoke(_dungeonNodes);
         SoundManager.PlaySound("ding");
@@ -145,9 +147,8 @@ public class DungeonGenerator : MonoBehaviour
         var sortedRooms = roomNodes.OrderBy(node => node.Rect.width * node.Rect.height);
 
         // Loops for 10% of the size of _dungeonNodes, and removes them. (The smallest rooms)
-        for (int i = 0; i < _dungeonNodes.Count * 0.3f; i++)
+        for (int i = 0; i < _dungeonNodes.Count * 0.1f; i++)
         {
-            yield return new WaitForSeconds(_delay);
             DungeonNode selectedRoom = sortedRooms.ElementAt(i);
             
             // Loops through selected neighbors (The doors) to remove their neighbors references
@@ -163,6 +164,8 @@ public class DungeonGenerator : MonoBehaviour
             _dungeonNodes.Remove(selectedRoom);
             
             _roomGenSuccess = Dfs(_dungeonNodes);
+            
+            yield return new WaitForSeconds(_delay);
         }
     }
     #endregion
@@ -309,7 +312,7 @@ public class DungeonGenerator : MonoBehaviour
     {
         DungeonNode rootNode = graph[0];
         
-        var visited = new List<DungeonNode>();
+        var visited = new HashSet<DungeonNode>();
         var stack = new Stack<DungeonNode>();
     
         stack.Push(rootNode);
